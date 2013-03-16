@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+REDHAWKGRP=redhawk
+SDRROOT=/var/redhawk/sdr
+
+if [ "$1" = "purge" ] ; then
+    for dir in "$SDRROOT/dom/components" "$SDRROOT/dom/waveforms" "$SDRROOT/dev/nodes" "$SDRROOT/dev/devices"; do
+        if dpkg-statoverride --list "$dir" >/dev/null 2>&1; then
+            dpkg-statoverride --remove "$dir"
+        fi
+    done
+fi
+
+#DEBHELPER#

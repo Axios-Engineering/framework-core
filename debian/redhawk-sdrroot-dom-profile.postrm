@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+SDRROOT=/var/redhawk/sdr
+
+if [ "$1" = "purge" ] ; then
+    rm -f $SDRROOT/dom/domain/DomainManager.dmd.xml*
+fi
+
+#DEBHELPER#

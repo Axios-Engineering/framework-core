@@ -8,4 +8,4 @@ Makefile.in
 *.pyc
 *~
 *.class
-
+.pc

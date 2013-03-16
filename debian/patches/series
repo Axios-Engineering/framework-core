@@ -1,0 +1,6 @@
+0001-Make-changes-necessary-to-get-the-framework-core-pro.patch
+0002-Make-log4py-compatible-with-Python-2.7.patch
+0003-Add-additional-checks-and-support-for-importing-the-.patch
+0004-Convert-popen-to-no-longer-use-the-shell-because-on-.patch
+0005-Make-sure-that-omnijni-get-s-installed-to-the-correc.patch
+0006-Fix-compile-error-on-Ubuntu-12.10-due-to-gcc-strictn.patch

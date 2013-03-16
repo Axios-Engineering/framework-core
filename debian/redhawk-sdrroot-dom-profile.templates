@@ -1,0 +1,6 @@
+Template: redhawk/domain_name
+Type: string 
+Default: REDHAWK_DEV
+Description: Provide a Domain Name
+ Provide a meaningful domain-name to use.
+

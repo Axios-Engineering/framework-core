@@ -1,0 +1,479 @@
+From: Michael Ihde <michael.ihde@axiosengineering.com>
+Date: Wed, 13 Mar 2013 22:18:55 +0000
+Subject: Make changes necessary to get the framework-core project to build on
+ Ubuntu 12.04
+
+---
+ build_src.sh                                       |    2 +-
+ src/acinclude/boost.m4                             |  138 ++++++++++++++++++--
+ src/base/framework/Makefile.am                     |    2 +-
+ src/build.sh                                       |    2 +-
+ src/configure.ac                                   |    2 +
+ src/control/framework/Makefile.am                  |    4 +-
+ src/control/sdr/devmgr/Makefile.am                 |    2 +-
+ src/control/sdr/dommgr/Makefile.am                 |    2 +-
+ .../BasicDevWithExecParam_cpp_impl1/Makefile.am    |    2 +-
+ .../BasicTestDevice_cpp_impl1/Makefile.am          |    2 +-
+ .../sdr/dev/devices/ExecutableDevice/Makefile.am   |    2 +-
+ .../SimpleDevice_cpp_impl1/Makefile.am             |    2 +-
+ .../sdr/dev/devices/issue_111_cpp/cpp/Makefile.am  |    2 +-
+ .../props_test_device_cpp_impl1/Makefile.am        |    2 +-
+ .../BasicAC/BasicAC_cpp_impl1/Makefile.am          |    2 +-
+ .../dom/components/MessageReceiverCpp/Makefile.am  |    2 +-
+ .../dom/components/MessageSenderCpp/Makefile.am    |    2 +-
+ .../components/PropertyChangeEventsCpp/Makefile.am |    2 +-
+ .../SimpleComponent_cpp_impl1/Makefile.am          |    2 +-
+ .../sdr/dom/components/TestCppProps/Makefile.am    |    2 +-
+ .../dom/components/TestCppsoftpkgDeps/Makefile.am  |    2 +-
+ 21 files changed, 151 insertions(+), 29 deletions(-)
+
+diff --git a/build_src.sh b/build_src.sh
+index 164219d..2af1b03 100755
+--- a/build_src.sh
++++ b/build_src.sh
+@@ -1,4 +1,4 @@
+-#!/bin/sh
++#!/usr/bin/env bash
+ pushd src
+ ./build.sh
+ popd
+diff --git a/src/acinclude/boost.m4 b/src/acinclude/boost.m4
+index 1f0d325..6f67ca3 100644
+--- a/src/acinclude/boost.m4
++++ b/src/acinclude/boost.m4
+@@ -403,8 +403,8 @@ dnl $5 action if not pass
+ AC_LANG_PUSH([C++])
+ dnl Check thd db_cxx library
+ AC_MSG_CHECKING([for -l$1])
+-SAVED_LDFLAGS=$LDFLAGS
+-LDFLAGS="$LDFLAGS -l$1"
++SAVED_LIBS=$LIBS
++LIBS="$LIBS -l$1"
+ AC_LINK_IFELSE(
+   [AC_LANG_PROGRAM([#include <$2>],
+    [$3])
+@@ -412,7 +412,7 @@ AC_LINK_IFELSE(
+   [AC_MSG_RESULT(yes); $4], 
+   [AC_MSG_RESULT(no); $5])
+ AC_LANG_POP([C++])
+-LDFLAGS="$SAVED_LDFLAGS"
++LIBS="$SAVED_LIBS"
+ 
+ dnl if test x"$ac_bdb_header" == "xyes" -a  x"$ac_bdb_lib" == "xyes"; then
+ dnl   AC_SUBST(BDB_CFLAGS, "")
+@@ -462,10 +462,10 @@ AC_DEFUN([AX_BOOST_FILESYSTEM],
+         AC_CACHE_CHECK(whether the Boost::Filesystem library is available,
+ 					   ax_cv_boost_filesystem,
+         [AC_LANG_PUSH([C++])
+-         AC_COMPILE_IFELSE(AC_LANG_PROGRAM([[@%:@include <boost/filesystem/path.hpp>]],
++         AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[@%:@include <boost/filesystem/path.hpp>]],
+                                    [[using namespace boost::filesystem;
+                                    path my_path( "foo/bar/data.txt" );
+-                                   return 0;]]),
++                                   return 0;]])],
+             				       ax_cv_boost_filesystem=yes, ax_cv_boost_filesystem=no)
+          AC_LANG_POP([C++])
+ 		])
+@@ -552,12 +552,12 @@ AC_DEFUN([AX_BOOST_SERIALIZATION],
+         AC_CACHE_CHECK(whether the Boost::Serialization library is available,
+ 					   ax_cv_boost_serialization,
+         [AC_LANG_PUSH([C++])
+-         AC_COMPILE_IFELSE(AC_LANG_PROGRAM([[@%:@include <boost/archive/text_oarchive.hpp>
++         AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[@%:@include <boost/archive/text_oarchive.hpp>
+ 	                                     @%:@include <sstream>]],
+                                    [[
+ 				   std::ostringstream out;
+                                    boost::archive::text_oarchive oa(out);
+-                                   return 0;]]),
++                                   return 0;]])],
+             				       ax_cv_boost_serialization=yes, ax_cv_boost_serialization=no)
+          AC_LANG_POP([C++])
+ 		])
+@@ -635,11 +635,11 @@ AC_DEFUN([AX_BOOST_REGEX],
+         AC_CACHE_CHECK(whether the Boost::Regex library is available,
+ 					   ax_cv_boost_regex,
+         [AC_LANG_PUSH([C++])
+-         AC_COMPILE_IFELSE(AC_LANG_PROGRAM([[@%:@include <boost/regex.hpp>
++         AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[@%:@include <boost/regex.hpp>
+ 	                                     ]],
+                                    [[
+ 				   boost::regex r();
+-                                   return 0;]]),
++                                   return 0;]])],
+             				       ax_cv_boost_regex=yes, ax_cv_boost_regex=no)
+          AC_LANG_POP([C++])
+ 		])
+@@ -682,3 +682,123 @@ AC_DEFUN([AX_BOOST_REGEX],
+ 		LIBS="$LIBS_SAVED"
+ 	fi
+ ])
++
++# ===========================================================================
++#      http://www.gnu.org/software/autoconf-archive/ax_boost_system.html
++# ===========================================================================
++#
++# SYNOPSIS
++#
++#   AX_BOOST_SYSTEM
++#
++# DESCRIPTION
++#
++#   Test for System library from the Boost C++ libraries. The macro requires
++#   a preceding call to AX_BOOST_BASE. Further documentation is available at
++#   <http://randspringer.de/boost/index.html>.
++#
++#   This macro calls:
++#
++#     AC_SUBST(BOOST_SYSTEM_LIB)
++#
++#   And sets:
++#
++#     HAVE_BOOST_SYSTEM
++#
++# LICENSE
++#
++#   Copyright (c) 2008 Thomas Porschberg <thomas@randspringer.de>
++#   Copyright (c) 2008 Michael Tindal
++#   Copyright (c) 2008 Daniel Casimiro <dan.casimiro@gmail.com>
++#
++#   Copying and distribution of this file, with or without modification, are
++#   permitted in any medium without royalty provided the copyright notice
++#   and this notice are preserved. This file is offered as-is, without any
++#   warranty.
++
++
++AC_DEFUN([AX_BOOST_SYSTEM],
++[
++	AC_ARG_WITH([boost-system],
++	AS_HELP_STRING([--with-boost-system@<:@=special-lib@:>@],
++                   [use the System library from boost - it is possible to specify a certain library for the linker
++                        e.g. --with-boost-system=boost_system-gcc-mt ]),
++        [
++        if test "$withval" = "no"; then
++			want_boost="no"
++        elif test "$withval" = "yes"; then
++            want_boost="yes"
++            ax_boost_user_system_lib=""
++        else
++		    want_boost="yes"
++		ax_boost_user_system_lib="$withval"
++		fi
++        ],
++        [want_boost="yes"]
++	)
++
++	if test "x$want_boost" = "xyes"; then
++        AC_REQUIRE([AC_PROG_CC])
++        AC_REQUIRE([AC_CANONICAL_BUILD])
++		CPPFLAGS_SAVED="$CPPFLAGS"
++		CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
++		export CPPFLAGS
++
++		LDFLAGS_SAVED="$LDFLAGS"
++		LDFLAGS="$LDFLAGS $BOOST_LDFLAGS"
++		export LDFLAGS
++
++        AC_CACHE_CHECK(whether the Boost::System library is available,
++					   ax_cv_boost_system,
++        [AC_LANG_PUSH([C++])
++			 CXXFLAGS_SAVE=$CXXFLAGS
++
++			 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[@%:@include <boost/system/error_code.hpp>]],
++                                   [[boost::system::system_category]])],
++                   ax_cv_boost_system=yes, ax_cv_boost_system=no)
++			 CXXFLAGS=$CXXFLAGS_SAVE
++             AC_LANG_POP([C++])
++		])
++		if test "x$ax_cv_boost_system" = "xyes"; then
++			AC_SUBST(BOOST_CPPFLAGS)
++
++			AC_DEFINE(HAVE_BOOST_SYSTEM,,[define if the Boost::System library is available])
++            BOOSTLIBDIR=`echo $BOOST_LDFLAGS | sed -e 's/@<:@^\/@:>@*//'`
++
++			LDFLAGS_SAVE=$LDFLAGS
++            if test "x$ax_boost_user_system_lib" = "x"; then
++                for libextension in `ls -r $BOOSTLIBDIR/libboost_system* 2>/dev/null | sed 's,.*/lib,,' | sed 's,\..*,,'` ; do
++                     ax_lib=${libextension}
++				    AC_CHECK_LIB($ax_lib, exit,
++                                 [BOOST_SYSTEM_LIB="-l$ax_lib"; AC_SUBST(BOOST_SYSTEM_LIB) link_system="yes"; break],
++                                 [link_system="no"])
++				done
++                if test "x$link_system" != "xyes"; then
++                for libextension in `ls -r $BOOSTLIBDIR/boost_system* 2>/dev/null | sed 's,.*/,,' | sed -e 's,\..*,,'` ; do
++                     ax_lib=${libextension}
++				    AC_CHECK_LIB($ax_lib, exit,
++                                 [BOOST_SYSTEM_LIB="-l$ax_lib"; AC_SUBST(BOOST_SYSTEM_LIB) link_system="yes"; break],
++                                 [link_system="no"])
++				done
++                fi
++
++            else
++               for ax_lib in $ax_boost_user_system_lib boost_system-$ax_boost_user_system_lib; do
++				      AC_CHECK_LIB($ax_lib, exit,
++                                   [BOOST_SYSTEM_LIB="-l$ax_lib"; AC_SUBST(BOOST_SYSTEM_LIB) link_system="yes"; break],
++                                   [link_system="no"])
++                  done
++
++            fi
++            if test "x$ax_lib" = "x"; then
++                AC_MSG_ERROR(Could not find a version of the library!)
++            fi
++			if test "x$link_system" = "xno"; then
++				AC_MSG_ERROR(Could not link against $ax_lib !)
++			fi
++		fi
++
++		CPPFLAGS="$CPPFLAGS_SAVED"
++	LDFLAGS="$LDFLAGS_SAVED"
++	fi
++])
+diff --git a/src/base/framework/Makefile.am b/src/base/framework/Makefile.am
+index a95fc7e..2219cd0 100644
+--- a/src/base/framework/Makefile.am
++++ b/src/base/framework/Makefile.am
+@@ -54,6 +54,6 @@ libossiecf_la_SOURCES += DomainManager_Channels.cpp \
+ endif
+ 
+ libossiecf_la_CXXFLAGS = -Wall $(BOOST_CPPFLAGS) $(OMNICOS_CFLAGS) $(OMNIORB_CFLAGS) $(LOG4CXX_FLAGS) $(PERSISTENCE_CFLAGS)
+-libossiecf_la_LIBADD = $(BOOST_LDFLAGS) $(BOOST_FILESYSTEM_LIB) $(BOOST_SERIALIZATION_LIB) $(BOOST_REGEX_LIB) $(BOOST_LIBS) $(OMNICOS_LIBS) $(OMNIORB_LIBS) $(LOG4CXX_LIBS) $(PERSISTENCE_LIBS)
++libossiecf_la_LIBADD = $(BOOST_LDFLAGS) $(BOOST_SYSTEM_LIB) $(BOOST_FILESYSTEM_LIB) $(BOOST_SERIALIZATION_LIB) $(BOOST_REGEX_LIB) $(BOOST_LIBS) $(OMNICOS_LIBS) $(OMNIORB_LIBS) $(LOG4CXX_LIBS) $(PERSISTENCE_LIBS)
+ libossiecf_la_LDFLAGS = -Wall -version-info $(LIBOSSIECF_VERSION_INFO)
+ 
+diff --git a/src/build.sh b/src/build.sh
+index ada564b..5700b38 100755
+--- a/src/build.sh
++++ b/src/build.sh
+@@ -1,4 +1,4 @@
+-#!/bin/sh
++#!/usr/bin/env bash
+ #
+ # This file is protected by Copyright. Please refer to the COPYRIGHT file 
+ # distributed with this source distribution.
+diff --git a/src/configure.ac b/src/configure.ac
+index 62b6b7a..8cb1f36 100644
+--- a/src/configure.ac
++++ b/src/configure.ac
+@@ -58,6 +58,8 @@ AC_CORBA_ORB
+ AC_LANG_PUSH([C++])
+ 
+ AX_BOOST_BASE([1.35])
++AX_BOOST_SYSTEM
++AC_DEFINE(BOOST_FILESYSTEM_VERSION, 2)
+ AX_BOOST_FILESYSTEM
+ AX_BOOST_THREAD
+ AX_BOOST_REGEX
+diff --git a/src/control/framework/Makefile.am b/src/control/framework/Makefile.am
+index 54f4392..8181d49 100644
+--- a/src/control/framework/Makefile.am
++++ b/src/control/framework/Makefile.am
+@@ -38,12 +38,12 @@ libossiecf_la_SOURCES += EventChannelSupport.cpp
+ endif
+ 
+ libossiecf_la_CXXFLAGS = -Wall $(BOOST_CPPFLAGS) $(OMNICOS_CFLAGS) $(OMNIORB_CFLAGS) $(LOG4CXX_FLAGS) $(PERSISTENCE_CFLAGS)
+-libossiecf_la_LIBADD = $(BOOST_LDFLAGS) $(BOOST_FILESYSTEM_LIB) $(BOOST_SERIALIZATION_LIB) $(BOOST_REGEX_LIB) $(BOOST_LIBS) $(OMNICOS_LIBS) $(OMNIORB_LIBS) $(LOG4CXX_LIBS) $(PERSISTENCE_LIBS)
++libossiecf_la_LIBADD = $(BOOST_LDFLAGS) $(BOOST_SYSTEM_LIB) $(BOOST_FILESYSTEM_LIB) $(BOOST_SERIALIZATION_LIB) $(BOOST_REGEX_LIB) $(BOOST_LIBS) $(OMNICOS_LIBS) $(OMNIORB_LIBS) $(LOG4CXX_LIBS) $(PERSISTENCE_LIBS)
+ libossiecf_la_LDFLAGS = -Wall
+ 
+ bin_PROGRAMS = nodeBooter
+ nodeBooter_SOURCES = nodebooter.cpp
+-nodeBooter_LDADD = $(BOOST_FILESYSTEM_LIB) ../parser/libossieparser.la ./libossiecf.la idl/libossieidl.la
++nodeBooter_LDADD = $(BOOST_SYSTEM_LIB) $(BOOST_FILESYSTEM_LIB) ../parser/libossieparser.la ./libossiecf.la idl/libossieidl.la
+ nodeBooter_LDFLAGS = -static
+ bin_SCRIPTS = nodeCleanup.py
+ 
+diff --git a/src/control/sdr/devmgr/Makefile.am b/src/control/sdr/devmgr/Makefile.am
+index ad0d8f9..5420e89 100644
+--- a/src/control/sdr/devmgr/Makefile.am
++++ b/src/control/sdr/devmgr/Makefile.am
+@@ -19,7 +19,7 @@
+ #
+ 
+ AM_CXXFLAGS = -Wall $(BOOST_CPPFLAGS) $(OMNIORB_CFLAGS) $(LOG4CXX_FLAGS)
+-AM_LDFLAGS = $(BOOST_LDFLAGS) $(OMNIORB_LIBS) $(LOG4CXX_LIBS)
++AM_LDFLAGS = $(BOOST_LDFLAGS) $(BOOST_SYSTEM_LIB) $(OMNIORB_LIBS) $(LOG4CXX_LIBS)
+ INCLUDES = -I../../include -I../../parser
+ 
+ DeviceManager_SOURCES = main.cpp DeviceManager_impl.cpp
+diff --git a/src/control/sdr/dommgr/Makefile.am b/src/control/sdr/dommgr/Makefile.am
+index feac784..99dfac4 100644
+--- a/src/control/sdr/dommgr/Makefile.am
++++ b/src/control/sdr/dommgr/Makefile.am
+@@ -19,7 +19,7 @@
+ #
+ 
+ AM_CXXFLAGS = -Wall $(BOOST_CPPFLAGS) $(OMNIORB_CFLAGS) $(LOG4CXX_FLAGS)
+-AM_LDFLAGS = $(BOOST_LDFLAGS) $(OMNIORB_LIBS) $(LOG4CXX_LIBS)
++AM_LDFLAGS = $(BOOST_LDFLAGS) $(BOOST_SYSTEM_LIB) $(OMNIORB_LIBS) $(LOG4CXX_LIBS)
+ INCLUDES = -I../../include -I../../parser
+ 
+ DomainManager_SOURCES = applicationSupport.cpp \
+diff --git a/src/testing/sdr/dev/devices/BasicDevWithExecParam_cpp/BasicDevWithExecParam_cpp_impl1/Makefile.am b/src/testing/sdr/dev/devices/BasicDevWithExecParam_cpp/BasicDevWithExecParam_cpp_impl1/Makefile.am
+index e593ce3..692b002 100644
+--- a/src/testing/sdr/dev/devices/BasicDevWithExecParam_cpp/BasicDevWithExecParam_cpp_impl1/Makefile.am
++++ b/src/testing/sdr/dev/devices/BasicDevWithExecParam_cpp/BasicDevWithExecParam_cpp_impl1/Makefile.am
+@@ -20,7 +20,7 @@
+ 
+  
+ AM_CXXFLAGS = -Wall $(OMNIORB_CFLAGS) $(OMNITHREAD_CFLAGS) $(OMNIDYNAMIC_CFLAGS)
+-AM_LDFLAGS = -Wall $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS)
++AM_LDFLAGS = -Wall $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNICOS_LIBS) $(OMNIDYNAMIC_LIBS)
+ INCLUDES = -I../../../../../../base/include -I../../../../../../base/parser -I../../../../../../base/include/ossie
+ 
+ ossieName = BasicDevWithExecParam_cpp_impl1
+diff --git a/src/testing/sdr/dev/devices/BasicTestDevice_cpp/BasicTestDevice_cpp_impl1/Makefile.am b/src/testing/sdr/dev/devices/BasicTestDevice_cpp/BasicTestDevice_cpp_impl1/Makefile.am
+index a416f26..4e8dca8 100644
+--- a/src/testing/sdr/dev/devices/BasicTestDevice_cpp/BasicTestDevice_cpp_impl1/Makefile.am
++++ b/src/testing/sdr/dev/devices/BasicTestDevice_cpp/BasicTestDevice_cpp_impl1/Makefile.am
+@@ -20,7 +20,7 @@
+ 
+  
+ AM_CXXFLAGS = -Wall $(OMNIORB_CFLAGS) $(OMNITHREAD_CFLAGS) $(OMNIDYNAMIC_CFLAGS)
+-AM_LDFLAGS = -Wall $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS)
++AM_LDFLAGS = -Wall $(OMNIORB_LIBS) $(BOOST_SYSTEM_LIB) $(OMNICOS_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS)
+ INCLUDES = -I../../../../../../base/include -I../../../../../../base/parser -I../../../../../../base/include/ossie
+ 
+ ossieName = BasicTestDevice_cpp_impl1
+diff --git a/src/testing/sdr/dev/devices/ExecutableDevice/Makefile.am b/src/testing/sdr/dev/devices/ExecutableDevice/Makefile.am
+index bb907a0..51420b3 100644
+--- a/src/testing/sdr/dev/devices/ExecutableDevice/Makefile.am
++++ b/src/testing/sdr/dev/devices/ExecutableDevice/Makefile.am
+@@ -20,7 +20,7 @@
+ 
+ 
+ AM_CXXFLAGS = -Wall $(BOOST_CPPFLAGS) $(OMNIORB_CFLAGS) $(LOG4CXX_FLAGS)
+-AM_LDFLAGS = $(BOOST_LDFLAGS) $(OMNIORB_LIBS) $(LOG4CXX_LIBS)
++AM_LDFLAGS = $(BOOST_LDFLAGS) $(BOOST_SYSTEM_LIB) $(OMNIORB_LIBS) $(OMNICOS_LIBS) $(LOG4CXX_LIBS)
+ INCLUDES = -I../../../../../base/include -I../../../../../base/parser
+ 
+ ossieName = ExecutableDevice
+diff --git a/src/testing/sdr/dev/devices/SimpleDevice/SimpleDevice_cpp_impl1/Makefile.am b/src/testing/sdr/dev/devices/SimpleDevice/SimpleDevice_cpp_impl1/Makefile.am
+index cb91f29..d6c358c 100644
+--- a/src/testing/sdr/dev/devices/SimpleDevice/SimpleDevice_cpp_impl1/Makefile.am
++++ b/src/testing/sdr/dev/devices/SimpleDevice/SimpleDevice_cpp_impl1/Makefile.am
+@@ -20,7 +20,7 @@
+ 
+  
+ AM_CXXFLAGS = -Wall $(OMNIORB_CFLAGS) $(OMNITHREAD_CFLAGS) $(OMNIDYNAMIC_CFLAGS)
+-AM_LDFLAGS = -Wall $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS) $(BOOST_THREAD_LIB)
++AM_LDFLAGS = -Wall $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNICOS_LIBS) $(OMNIDYNAMIC_LIBS) $(BOOST_THREAD_LIB) $(BOOST_SYSTEM_LIB)
+ INCLUDES = -I../../../../../../base/include -I../../../../../../base/parser -I../../../../../../base/include/ossie
+ 
+ ossieName = SimpleDevice_cpp_impl1
+diff --git a/src/testing/sdr/dev/devices/issue_111_cpp/cpp/Makefile.am b/src/testing/sdr/dev/devices/issue_111_cpp/cpp/Makefile.am
+index e562ef5..4c35a35 100644
+--- a/src/testing/sdr/dev/devices/issue_111_cpp/cpp/Makefile.am
++++ b/src/testing/sdr/dev/devices/issue_111_cpp/cpp/Makefile.am
+@@ -20,7 +20,7 @@
+ 
+  
+ AM_CXXFLAGS = -Wall $(OMNIORB_CFLAGS) $(OMNITHREAD_CFLAGS) $(OMNIDYNAMIC_CFLAGS) $(BOOST_CPPFLAGS)
+-AM_LDFLAGS = -Wall $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS) $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB)
++AM_LDFLAGS = -Wall $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS) $(OMNICOS_LIBS) $(BOOST_LDFLAGS) $(BOOST_THREAD_LIB) $(BOOST_SYSTEM_LIB)
+ INCLUDES = -I../../../../../../base/include -I../../../../../../base/parser -I../../../../../../base/include/ossie
+ 
+ ossieName = issue_111_cpp
+diff --git a/src/testing/sdr/dev/devices/props_test_device/props_test_device_cpp_impl1/Makefile.am b/src/testing/sdr/dev/devices/props_test_device/props_test_device_cpp_impl1/Makefile.am
+index d80f485..7e79aed 100644
+--- a/src/testing/sdr/dev/devices/props_test_device/props_test_device_cpp_impl1/Makefile.am
++++ b/src/testing/sdr/dev/devices/props_test_device/props_test_device_cpp_impl1/Makefile.am
+@@ -20,7 +20,7 @@
+ 
+  
+ AM_CXXFLAGS = -Wall $(OMNIORB_CFLAGS) $(OMNITHREAD_CFLAGS) $(OMNIDYNAMIC_CFLAGS)
+-AM_LDFLAGS = -Wall $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS) $(BOOST_THREAD_LIB)
++AM_LDFLAGS = -Wall $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS) $(OMNICOS_LIBS) $(BOOST_THREAD_LIB) $(BOOST_SYSTEM_LIB)
+ INCLUDES = -I../../../../../../base/include -I../../../../../../base/parser -I../../../../../../base/include/ossie
+ 
+ ossieName = props_test_device_cpp_impl1
+diff --git a/src/testing/sdr/dom/components/BasicAC/BasicAC_cpp_impl1/Makefile.am b/src/testing/sdr/dom/components/BasicAC/BasicAC_cpp_impl1/Makefile.am
+index ccf3ebb..5190668 100644
+--- a/src/testing/sdr/dom/components/BasicAC/BasicAC_cpp_impl1/Makefile.am
++++ b/src/testing/sdr/dom/components/BasicAC/BasicAC_cpp_impl1/Makefile.am
+@@ -18,7 +18,7 @@
+ # along with this program.  If not, see http://www.gnu.org/licenses/.
+ #
+ 
+-AM_LDFLAGS =  -no-install
++AM_LDFLAGS =  -no-install $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS) $(BOOST_SYSTEM_LIB)
+ INCLUDES = -I../../../../../../base/include -I../../../../../../base/parser 
+ 
+ noinst_PROGRAMS = BasicAC_cpp_impl1
+diff --git a/src/testing/sdr/dom/components/MessageReceiverCpp/Makefile.am b/src/testing/sdr/dom/components/MessageReceiverCpp/Makefile.am
+index 604f142..87f4d6b 100644
+--- a/src/testing/sdr/dom/components/MessageReceiverCpp/Makefile.am
++++ b/src/testing/sdr/dom/components/MessageReceiverCpp/Makefile.am
+@@ -18,7 +18,7 @@
+ # along with this program.  If not, see http://www.gnu.org/licenses/.
+ #
+ 
+-AM_LDFLAGS =  -no-install
++AM_LDFLAGS =  -no-install $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS)
+ INCLUDES = -I../../../../../base/include -I../../../../../base/parser
+ 
+ noinst_PROGRAMS = MessageReceiverCpp
+diff --git a/src/testing/sdr/dom/components/MessageSenderCpp/Makefile.am b/src/testing/sdr/dom/components/MessageSenderCpp/Makefile.am
+index 18b313d..7c5bb9d 100644
+--- a/src/testing/sdr/dom/components/MessageSenderCpp/Makefile.am
++++ b/src/testing/sdr/dom/components/MessageSenderCpp/Makefile.am
+@@ -18,7 +18,7 @@
+ # along with this program.  If not, see http://www.gnu.org/licenses/.
+ #
+ 
+-AM_LDFLAGS =  -no-install
++AM_LDFLAGS =  -no-install $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS) $(OMNICOS_LIBS) $(BOOST_SYSTEM_LIB)
+ INCLUDES = -I../../../../../base/include -I../../../../../base/parser
+ 
+ noinst_PROGRAMS = MessageSenderCpp
+diff --git a/src/testing/sdr/dom/components/PropertyChangeEventsCpp/Makefile.am b/src/testing/sdr/dom/components/PropertyChangeEventsCpp/Makefile.am
+index 85c36aa..f7f9add 100644
+--- a/src/testing/sdr/dom/components/PropertyChangeEventsCpp/Makefile.am
++++ b/src/testing/sdr/dom/components/PropertyChangeEventsCpp/Makefile.am
+@@ -18,7 +18,7 @@
+ # along with this program.  If not, see http://www.gnu.org/licenses/.
+ #
+ 
+-AM_LDFLAGS =  -no-install
++AM_LDFLAGS =  -no-install $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS) $(OMNICOS_LIBS)
+ INCLUDES = -I../../../../../base/include -I../../../../../base/parser
+ 
+ noinst_PROGRAMS = PropertyChangeSenderCpp
+diff --git a/src/testing/sdr/dom/components/SimpleComponent/SimpleComponent_cpp_impl1/Makefile.am b/src/testing/sdr/dom/components/SimpleComponent/SimpleComponent_cpp_impl1/Makefile.am
+index 9ae6671..a51f339 100644
+--- a/src/testing/sdr/dom/components/SimpleComponent/SimpleComponent_cpp_impl1/Makefile.am
++++ b/src/testing/sdr/dom/components/SimpleComponent/SimpleComponent_cpp_impl1/Makefile.am
+@@ -21,7 +21,7 @@
+  
+ #AM_CXXFLAGS = -Wall $(OMNIORB_CFLAGS) $(OMNITHREAD_CFLAGS) $(OMNIDYNAMIC_CFLAGS)
+ #AM_LDFLAGS = -Wall $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS)
+-AM_LDFLAGS =  -no-install
++AM_LDFLAGS =  -no-install $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS)
+ INCLUDES = -I../../../../../../base/include -I../../../../../../base/parser
+ 
+ noinst_PROGRAMS = SimpleComponent_cpp_impl1
+diff --git a/src/testing/sdr/dom/components/TestCppProps/Makefile.am b/src/testing/sdr/dom/components/TestCppProps/Makefile.am
+index 8a335a8..60623a8 100644
+--- a/src/testing/sdr/dom/components/TestCppProps/Makefile.am
++++ b/src/testing/sdr/dom/components/TestCppProps/Makefile.am
+@@ -18,7 +18,7 @@
+ # along with this program.  If not, see http://www.gnu.org/licenses/.
+ #
+ 
+-AM_LDFLAGS =  -no-install
++AM_LDFLAGS =  -no-install $(OMNICOS_LIBS) $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS)
+ INCLUDES = -I../../../../../base/include -I../../../../../base/parser
+ 
+ noinst_PROGRAMS = TestCppProps
+diff --git a/src/testing/sdr/dom/components/TestCppsoftpkgDeps/Makefile.am b/src/testing/sdr/dom/components/TestCppsoftpkgDeps/Makefile.am
+index fa9b2d2..62af902 100644
+--- a/src/testing/sdr/dom/components/TestCppsoftpkgDeps/Makefile.am
++++ b/src/testing/sdr/dom/components/TestCppsoftpkgDeps/Makefile.am
+@@ -18,7 +18,7 @@
+ # along with this program.  If not, see http://www.gnu.org/licenses/.
+ #
+ 
+-AM_LDFLAGS =  -no-install
++AM_LDFLAGS =  -no-install $(OMNIORB_LIBS) $(OMNITHREAD_LIBS) $(OMNIDYNAMIC_LIBS) $(BOOST_SYSTEM_LIB)
+ INCLUDES = -I../../../../../base/include -I../../../../../base/parser -I../linkedLibraryTest
+ 
+ noinst_PROGRAMS = TestCppsoftpkgDeps
+-- 

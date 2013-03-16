@@ -1,0 +1,6 @@
+etc/*
+usr/redhawk/core/*
+var/redhawk/sdr/dom/components/
+var/redhawk/sdr/dom/waveforms/
+var/redhawk/sdr/dev/devices/
+var/redhawk/sdr/dev/nodes/

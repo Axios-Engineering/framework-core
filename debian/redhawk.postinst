@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -e
+
+. /usr/share/debconf/confmodule
+
+REDHAWKGRP=redhawk
+SDRROOT=/var/redhawk/sdr
+
+if [ "$1" = configure ]; then
+    addgroup --system --quiet "$REDHAWKGRP"
+
+    # Respect the administrators wishes for group-ownership of SDRROOT
+    for dir in "$SDRROOT/dom/components" "$SDRROOT/dom/waveforms" "$SDRROOT/dev/nodes" "$SDRROOT/dev/devices"; do
+	if ! dpkg-statoverride --list "$dir" >/dev/null 2>&1; then
+	    db_get redhawk/allow_group_access_to_sdrroot
+	    if [ "$RET" = "true" ] ; then
+		dpkg-statoverride --update --add root redhawk 2775 "$dir"
+	    fi
+	fi
+    done
+fi
+
+#DEBHELPER#

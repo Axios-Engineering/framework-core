@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -e
+
+. /usr/share/debconf/confmodule
+
+SDRROOT=/var/redhawk/sdr
+UUID=`uuidgen`
+
+if [ "$1" = configure ]; then
+    db_get redhawk/domain_name
+    DOMAINNAME="$RET"
+    cp --backup=numbered $SDRROOT/dom/domain/DomainManager.dmd.xml.template $SDRROOT/dom/domain/DomainManager.dmd.xml
+    sed -i "s/@UUID@/$UUID/g" $SDRROOT/dom/domain/DomainManager.dmd.xml
+    sed -i "s/@DESCRIPTION@/Default Domain/g" $SDRROOT/dom/domain/DomainManager.dmd.xml
+    sed -i "s/@NAME@/$DOMAINNAME/g" $SDRROOT/dom/domain/DomainManager.dmd.xml
+fi
+
+#DEBHELPER#

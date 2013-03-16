@@ -1,0 +1,39 @@
+Source: redhawk
+Section: devel
+Priority: extra
+Maintainer: Axios <launchpad@axiosengineering.com>
+Build-Depends: debhelper (>= 8.0.0), pkg-config, libtool, python, autoconf, automake,
+ libboost-dev, libboost-system-dev, libboost-filesystem-dev, libboost-regex-dev, libboost-thread-dev,
+ omniidl, omniorb-idl, libomniorb4-dev, libomnievents-dev, libcos4-dev, python-omniorb, omniidl-python,
+ openjdk-6-jdk, xsdcxx, python-numpy, liblog4cxx10-dev
+Standards-Version: 3.9.3
+Homepage: http://www.redhawksdr.org
+Vcs-Git: git://git@github.com:Axios-Engineering/framework-core.git
+Vcs-Browser: https://github.com/Axios-Engineering/framework-core/tree/ubuntu
+
+Package: redhawk
+Architecture: any
+Depends: omniorb, omniorb-nameserver, omniorb-idl, omnievents,
+ omniidl, omniidl-python, python-omniorb, python-numpy,
+ openjdk-6-jdk, ${shlibs:Depends}, ${misc:Depends}
+Description: The REDHAWK SDR Core Framework 
+ REDHAWK is a Software Defined Radio framework
+
+Package: redhawk-sdrroot-dev-mgr
+Architecture: any
+Depends: redhawk, ${shlibs:Depends}, ${misc:Depends}
+Description: REDHAWK Device Manager
+ The SDDROOT Device Manager software package
+
+Package: redhawk-sdrroot-dom-mgr
+Architecture: any
+Depends: redhawk, ${shlibs:Depends}, ${misc:Depends}
+Description: REDHAWK Domain Manager
+ The SDDROOT Domain Manager software package
+
+Package: redhawk-sdrroot-dom-profile
+Architecture: any
+Depends: redhawk-sdrroot-dom-mgr, ${misc:Depends}
+Description: REDHAWK Domain Manager Profile
+ A generic domain profile and domain profile template
+

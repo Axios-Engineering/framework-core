@@ -1,0 +1,21 @@
+From: Michael Ihde <michael.ihde@axiosengineering.com>
+Date: Thu, 14 Mar 2013 01:29:16 +0000
+Subject: Make sure that omnijni get's installed to the correct place
+
+---
+ src/configure.ac |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/configure.ac b/src/configure.ac
+index f31aeb0..72eb42d 100644
+--- a/src/configure.ac
++++ b/src/configure.ac
+@@ -229,6 +229,7 @@ if test "$HAVE_JAVASUPPORT" = yes; then
+   # Install omnijni's Python files per the install scheme (it does not use a setup.py).
+   if test "$PYTHON_INSTALL_SCHEME" = "home"; then
+     pythondir='${prefix}/lib/python'
++    pkgpythondir='${prefix}/lib/python/ossie'
+   fi
+ 
+   # Set flags and variables for building with omnijni
+-- 

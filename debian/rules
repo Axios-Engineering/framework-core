@@ -1,0 +1,78 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+#
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+#
+# Modified to make a template file for a multi-binary package with separated
+# build-arch and build-indep targets  by Bill Allombert 2001
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS
+
+export JAVA_HOME=`update-alternatives --query javac | grep Value: | awk '{print $2}' | sed "s:bin/javac::"`
+
+
+%:
+	dh $@ --with python2
+
+override_dh_auto_configure:
+	cd src ; ./reconf
+	cd src ; ./configure --with-ossie=/usr/redhawk/core --with-sdr=/var/redhawk/sdr --sysconfdir=/etc
+
+override_dh_auto_build:
+	$(MAKE) -C src
+
+override_dh_auto_install:
+	$(MAKE) -C src install DESTDIR=$(CURDIR)/debian/tmp
+	mkdir -p $(CURDIR)/debian/tmp/var/redhawk/sdr/dom/components
+	mkdir -p $(CURDIR)/debian/tmp/var/redhawk/sdr/dom/waveforms
+	mkdir -p $(CURDIR)/debian/tmp/var/redhawk/sdr/dev/nodes
+	mkdir -p $(CURDIR)/debian/tmp/var/redhawk/sdr/dev/devices
+
+override_dh_auto_clean:
+	cd src ; if [ -e Makefile ] ; then $(MAKE) distclean ; fi
+	rm -f src/install-sh
+	rm -f src/config.guess
+	rm -f src/ltmain.sh
+	rm -f src/config.sub
+	rm -f src/py-compile
+	rm -f src/depcomp
+	rm -f src/missing
+	rm -f src/ltversion.m4
+	rm -f src/lt~obsolete.m4
+	rm -f src/ltsugar.m4
+	rm -f src/libtool.m4
+	rm -f src/ltoptions.m4
+	rm -f src/configure
+	rm -f src/acinclude/ltversion.m4
+	rm -f src/acinclude/lt~obsolete.m4
+	rm -f src/acinclude/ltsugar.m4
+	rm -f src/acinclude/libtool.m4
+	rm -f src/acinclude/ltoptions.m4
+	rm -f src/aclocal.m4
+	rm -f src/control/framework/idl/*.h
+	rm -f src/etc/ld.so.conf.d/redhawk.conf
+	rm -f src/etc/profile.d/local_pkg_config.csh
+	rm -f src/etc/profile.d/local_pkg_config.sh
+	rm -f src/etc/profile.d/redhawk-sdrroot.csh
+	rm -f src/etc/profile.d/redhawk-sdrroot.sh
+	rm -f src/etc/profile.d/redhawk.csh
+	rm -f src/etc/profile.d/redhawk.sh
+	rm -f src/base/framework/idl/*.h
+	rm -f src/testing/sdr/dev/mgr/*.xml
+	rm -f src/testing/sdr/dom/mgr/*.xml
+	rm -f src/testing/sdr/dom/domain/*.xml
+	rm -f src/testing/sdr/dev/mgr/DeviceManager
+	rm -f src/testing/sdr/dom/mgr/DomainManager
+	rm -rf src/base/framework/python/ossie/cf
+	cd src/testing ; cat .gitignore | xargs rm -rf
+	find src -name Makefile.in -exec rm -f '{}' ';'
+	find src -name '*.pyc' -exec rm -f '{}' ';'
+	find src/testing -name '*.log' -exec rm -f '{}' ';'
