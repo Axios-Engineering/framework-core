@@ -15,7 +15,7 @@ Package: redhawk
 Architecture: any
 Depends: omniorb, omniorb-nameserver, omniorb-idl, omnievents,
  omniidl, omniidl-python, python-omniorb, python-numpy,
- openjdk-6-jdk, ${shlibs:Depends}, ${misc:Depends}
+ openjdk-6-jdk, python, ${shlibs:Depends}, ${misc:Depends}
 Description: The REDHAWK SDR Core Framework 
  REDHAWK is a Software Defined Radio framework
 

@@ -16,8 +16,7 @@
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
-export JAVA_HOME=`update-alternatives --query javac | grep Value: | awk '{print $2}' | sed "s:bin/javac::"`
-
+export JAVA_HOME=$(shell update-alternatives --query javac | grep Value: | awk '{print $$2}' | sed 's:bin/javac::')
 
 %:
 	dh $@ --with python2

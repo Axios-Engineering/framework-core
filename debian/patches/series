@@ -4,3 +4,4 @@
 0004-Convert-popen-to-no-longer-use-the-shell-because-on-.patch
 0005-Make-sure-that-omnijni-get-s-installed-to-the-correc.patch
 0006-Fix-compile-error-on-Ubuntu-12.10-due-to-gcc-strictn.patch
+0007-Fix-ossie.pc-so-that-components-compile-without-modi.patch
