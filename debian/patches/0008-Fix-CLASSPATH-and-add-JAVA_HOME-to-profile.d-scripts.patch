@@ -1,0 +1,38 @@
+From: Michael Ihde <michael.ihde@axiosengineering.com>
+Date: Fri, 22 Mar 2013 21:03:49 +0000
+Subject: Fix CLASSPATH and add JAVA_HOME to profile.d scripts
+
+---
+ src/etc/profile.d/redhawk.csh.in |    5 +++--
+ src/etc/profile.d/redhawk.sh.in  |    3 ++-
+ 2 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/src/etc/profile.d/redhawk.csh.in b/src/etc/profile.d/redhawk.csh.in
+index 4a58fb8..51020e6 100644
+--- a/src/etc/profile.d/redhawk.csh.in
++++ b/src/etc/profile.d/redhawk.csh.in
+@@ -20,8 +20,9 @@ else
+ endif
+ 
+ if ($?CLASSPATH) then
+-    setenv CLASSPATH $OSSIEHOME/lib:${CLASSPATH}
++    setenv CLASSPATH $OSSIEHOME/lib/\*:${CLASSPATH}
+ else
+-    setenv CLASSPATH $OSSIEHOME/lib
++    setenv CLASSPATH $OSSIEHOME/lib/\*
+ endif
+ 
++setenv JAVA_HOME `update-alternatives --query javac | grep Value: | awk '{print $2}' | sed 's:bin/javac::'`
+diff --git a/src/etc/profile.d/redhawk.sh.in b/src/etc/profile.d/redhawk.sh.in
+index 7c0707f..ad36ad8 100644
+--- a/src/etc/profile.d/redhawk.sh.in
++++ b/src/etc/profile.d/redhawk.sh.in
+@@ -26,5 +26,6 @@ export LD_LIBRARY_PATH=@libdir@:${LD_LIBRARY_PATH}
+ 
+ export PYTHONPATH=${OSSIEHOME}/lib64/python:${OSSIEHOME}/lib/python:${PYTHONPATH}
+ 
+-export CLASSPATH=${OSSIEHOME}/lib:${CLASSPATH}
++export CLASSPATH=${OSSIEHOME}/lib/\*:${CLASSPATH}
+ 
++export JAVA_HOME=`update-alternatives --query javac | grep Value: | awk '{print $2}' | sed 's:bin/javac::'`
+-- 

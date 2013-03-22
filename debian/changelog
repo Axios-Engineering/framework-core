@@ -1,3 +1,9 @@
+redhawk (1.8.3-3~precise1) precise; urgency=low
+
+  ** Make CLASSPATH and JAVA_HOME set correctly in profile.d
+
+ -- Axios <launchpad@axiosengineering.com>  Sun, 22 Mar 2013 00:00:00 +0000
+
 redhawk (1.8.3-2~quantal1) quantal; urgency=low
 
   ** Fix issue where omnijni wasn't installed correctly

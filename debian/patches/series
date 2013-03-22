@@ -5,3 +5,4 @@
 0005-Make-sure-that-omnijni-get-s-installed-to-the-correc.patch
 0006-Fix-compile-error-on-Ubuntu-12.10-due-to-gcc-strictn.patch
 0007-Fix-ossie.pc-so-that-components-compile-without-modi.patch
+0008-Fix-CLASSPATH-and-add-JAVA_HOME-to-profile.d-scripts.patch
