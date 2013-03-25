@@ -1,3 +1,9 @@
+redhawk (1.8.3-4~quantal1) quantal; urgency=low
+
+  ** Create a redhawk-build-essentials meta-package
+
+ -- Axios <launchpad@axiosengineering.com>  Sun, 25 Mar 2013 00:00:00 +0000
+
 redhawk (1.8.3-4~precise1) precise; urgency=low
 
   ** Create a redhawk-build-essentials meta-package
