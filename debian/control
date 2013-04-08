@@ -41,7 +41,8 @@ Description: REDHAWK Domain Manager Profile
 Package: redhawk-build-essential
 Architecture: any
 Depends: redhawk, build-essential, libboost-dev, libboost-system-dev, libboost-filesystem-dev, libboost-regex-dev, 
- libboost-thread-dev, libcos4-dev, libomnievents-dev, libomniorb4-dev, liblog4cxx10-dev
+ libboost-thread-dev, libcos4-dev, libomnievents-dev, libomniorb4-dev, liblog4cxx10-dev, autoconf, automake,
+ pkg-config 
 Description: REDHAWK Build Essentials
  Packages commonly required to build REDHAWK components and devices.
 
