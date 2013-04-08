@@ -1,3 +1,9 @@
+redhawk (1.8.3-5~quantal1) quantal; urgency=low
+
+  ** Add autoconf, automake, and pkg-config to redhawk-build-essential
+
+ -- Axios <launchpad@axiosengineering.com>  Sun, 8 Apr 2013 00:00:00 +0000
+
 redhawk (1.8.3-5~precise1) precise; urgency=low
 
   ** Add autoconf, automake, and pkg-config to redhawk-build-essential
