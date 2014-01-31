@@ -122,6 +122,8 @@ namespace ossie
     bool checkProcessor(const std::vector<std::string>& processorDeps, const std::vector<const Property*>& props);
     bool checkOs(const std::vector<ossie::SPD::NameVersionPair>& osDeps, const std::vector<const Property*>& props);
     CF::Properties getNonNilConfigureProperties(CF::Properties& originalProperties);
+
+    CORBA::Any evaluateMathStatement(const std::string& value, CORBA::TCKind kind, const CF::Properties& configureProperties);
 }
 
 #endif

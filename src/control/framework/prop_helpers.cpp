@@ -940,6 +940,75 @@ static CF::Properties overrideStructValues(const StructProperty* prop, const std
     return structval;
 }
 
+CORBA::Any ossie::evaluateMathStatement(const std::string& value, CORBA::TCKind kind, const CF::Properties& configureProperties) {
+    CORBA::Any result;
+    LOG_TRACE(prop_helpers, "Invoking custom OSSIE dynamic allocation property support")
+    // Turn propvalue into a string for easy parsing
+    std::string mathStatement = value.substr(8);
+    if ((*mathStatement.begin() == '(') && (*mathStatement.rbegin() == ')')) {
+	// TODO - implement a more relaxed parser
+	mathStatement.erase(mathStatement.begin(), mathStatement.begin() + 1);
+	mathStatement.erase(mathStatement.end() - 1, mathStatement.end());
+	std::vector<std::string> args;
+	while ((mathStatement.length() > 0) && (mathStatement.find(',') != std::string::npos)) {
+	    args.push_back(mathStatement.substr(0, mathStatement.find(',')));
+	    LOG_TRACE(prop_helpers, "ARG " << args.back())
+	    mathStatement.erase(0, mathStatement.find(',') + 1);
+	}
+	args.push_back(mathStatement);
+	LOG_TRACE(prop_helpers, "ARG " << args.back())
+
+	if (args.size() != 3) {
+	    std::ostringstream eout;
+	    eout << " invalid __MATH__ statement; '" << mathStatement << "'";
+	    throw ossie::PropertyMatchingError(eout.str());
+	}
+
+	LOG_TRACE(prop_helpers, "__MATH__ " << args[0] << " " << args[1] << " " << args[2])
+
+	double operand;
+	operand = strtod(args[0].c_str(), NULL);
+
+	// See if there is a property in the component
+	LOG_TRACE(prop_helpers, "Attempting to find matching property for " << args[1])
+	const CF::DataType* matchingCompProp = 0;
+	for (unsigned int j = 0; j < configureProperties.length(); j++) {
+	    if (strcmp(configureProperties[j].id, args[1].c_str()) == 0) {
+		LOG_TRACE(prop_helpers, "Matched property for " << args[1])
+		matchingCompProp = &configureProperties[j];
+	    }
+	    // See if the property we're looking for is a member of a struct
+	    //  **note: this only works because the dtd states that each
+	    //          property id is globally unique within the prf
+	    const CF::Properties* tmp_ref = NULL;
+	    configureProperties[j].value >>= tmp_ref;
+	    if (tmp_ref != NULL) {
+		for (unsigned prop_idx = 0; prop_idx<tmp_ref->length(); prop_idx++) {
+		    if (strcmp((*tmp_ref)[prop_idx].id, args[1].c_str()) == 0) {
+			LOG_TRACE(prop_helpers, "Matched property for " << args[1])
+			matchingCompProp = &(*tmp_ref)[prop_idx];
+		    }
+		}
+	    }
+	}
+
+	if (matchingCompProp == 0) {
+	    std::ostringstream eout;
+	    eout << " failed to match component property in __MATH__ statement; property id = " << args[1] << " does not exist in component as a configure property";
+	    throw ossie::PropertyMatchingError(eout.str());
+	}
+
+	std::string math = args[2];
+	CORBA::Any compValue = matchingCompProp->value;
+	result = ossie::calculateDynamicProp(operand, compValue, math, kind);
+    } else {
+	std::ostringstream eout;
+	eout << " invalid __MATH__ statement; '" << mathStatement << "'";
+	throw ossie::PropertyMatchingError(eout.str());
+    }
+    return result;
+}
+
 static CF::Properties overrideStructValues(const StructProperty* prop, const std::map<std::string, std::string>& values, const CF::Properties& configureProperties)
 {
     const std::vector<SimpleProperty>& simpleProps = prop->getValue();
@@ -956,75 +1025,10 @@ static CF::Properties overrideStructValues(const StructProperty* prop, const std
         } else {
             LOG_TRACE(prop_helpers, "setting structure element " << id << " to " << itemoverride->second);
             std::string value = itemoverride->second;
+	    CORBA::TCKind kind = ossie::getTypeKind(simple.getType());
             if (strncmp(value.c_str(), "__MATH__", 8) == 0) {
-                CF::DataType dataType;
-                dataType.id = CORBA::string_dup(simple.getID());
-                CORBA::TCKind kind = ossie::getTypeKind(simple.getType());
-                LOG_TRACE(prop_helpers, "Invoking custom OSSIE dynamic allocation property support")
-                // Turn propvalue into a string for easy parsing
-                std::string mathStatement = value.substr(8);
-                if ((*mathStatement.begin() == '(') && (*mathStatement.rbegin() == ')')) {
-                    // TODO - implement a more relaxed parser
-                    mathStatement.erase(mathStatement.begin(), mathStatement.begin() + 1);
-                    mathStatement.erase(mathStatement.end() - 1, mathStatement.end());
-                    std::vector<std::string> args;
-                    while ((mathStatement.length() > 0) && (mathStatement.find(',') != std::string::npos)) {
-                        args.push_back(mathStatement.substr(0, mathStatement.find(',')));
-                        LOG_TRACE(prop_helpers, "ARG " << args.back())
-                        mathStatement.erase(0, mathStatement.find(',') + 1);
-                    }
-                    args.push_back(mathStatement);
-                    LOG_TRACE(prop_helpers, "ARG " << args.back())
-
-                    if (args.size() != 3) {
-                        std::ostringstream eout;
-                        eout << " invalid __MATH__ statement; '" << mathStatement << "'";
-                        throw ossie::PropertyMatchingError(eout.str());
-                    }
-
-                    LOG_TRACE(prop_helpers, "__MATH__ " << args[0] << " " << args[1] << " " << args[2])
-
-                    double operand;
-                    operand = strtod(args[0].c_str(), NULL);
-
-                    // See if there is a property in the component
-                    LOG_TRACE(prop_helpers, "Attempting to find matching property for " << args[1])
-                    const CF::DataType* matchingCompProp = 0;
-                    for (unsigned int j = 0; j < configureProperties.length(); j++) {
-                        if (strcmp(configureProperties[j].id, args[1].c_str()) == 0) {
-                            LOG_TRACE(prop_helpers, "Matched property for " << args[1])
-                            matchingCompProp = &configureProperties[j];
-                        }
-                        // See if the property we're looking for is a member of a struct
-                        //  **note: this only works because the dtd states that each
-                        //          property id is globally unique within the prf
-                        const CF::Properties* tmp_ref = NULL;
-                        configureProperties[j].value >>= tmp_ref;
-                        if (tmp_ref != NULL) {
-                            for (unsigned prop_idx = 0; prop_idx<tmp_ref->length(); prop_idx++) {
-                                if (strcmp((*tmp_ref)[prop_idx].id, args[1].c_str()) == 0) {
-                                    LOG_TRACE(prop_helpers, "Matched property for " << args[1])
-                                    matchingCompProp = &(*tmp_ref)[prop_idx];
-                                }
-                            }
-                        }
-                    }
-
-                    if (matchingCompProp == 0) {
-                        std::ostringstream eout;
-                        eout << " failed to match component property in __MATH__ statement; property id = " << args[1] << " does not exist in component as a configure property";
-                        throw ossie::PropertyMatchingError(eout.str());
-                    }
-
-                    std::string math = args[2];
-                    CORBA::Any compValue = matchingCompProp->value;
-                    dataType.value = ossie::calculateDynamicProp(operand, compValue, math, kind);
-                } else {
-                    std::ostringstream eout;
-                    eout << " invalid __MATH__ statement; '" << mathStatement << "'";
-                    throw ossie::PropertyMatchingError(eout.str());
-                }
-                structval[ii] = dataType;
+		structval[ii].id = CORBA::string_dup(simple.getID());
+                structval[ii].value = ossie::evaluateMathStatement(value, kind, configureProperties);
             } else {
                 structval[ii] = overrideSimpleValue(&simple, itemoverride->second);
             }

@@ -165,66 +165,12 @@ bool ComponentImplementationInfo::checkUsesDevices(ossie::Properties& _prf, CF::
                     depProp.id = CORBA::string_dup(dependencyProp->getID());
                     LOG_TRACE(ComponentImplementationInfo, " Matched! " << depProp.id << " value " << propvalue)
                     CORBA::Any capacityDep = ossie::string_to_any(propvalue, getTypeKind(simpleMatchingProp->getType()));
-
-                    if (strncmp(propvalue, "__MATH__", 8) != 0) {
-                        depProp.value = capacityDep;
+                    CORBA::TCKind kind = getTypeKind(simpleMatchingProp->getType());
+                    if (strncmp(propvalue, "__MATH__", 8) == 0) {
+                        depProp.value = ossie::evaluateMathStatement(std::string(propvalue), kind, configureProperties);
                     } else {
-                        LOG_TRACE(ComponentImplementationInfo, "Invoking custom OSSIE dynamic allocation property support")
-                        // Turn propvalue into a string for easy parsing
-                        std::string mathStatement = std::string(propvalue).substr(8);
-                        if ((*mathStatement.begin() == '(') && (*mathStatement.rbegin() == ')')) {
-                            // TODO - implement a more relaxed parser
-                            mathStatement.erase(mathStatement.begin(), mathStatement.begin() + 1);
-                            mathStatement.erase(mathStatement.end() - 1, mathStatement.end());
-                            std::vector<std::string> args;
-                            while ((mathStatement.length() > 0) && (mathStatement.find(',') != std::string::npos)) {
-                                args.push_back(mathStatement.substr(0, mathStatement.find(',')));
-                                LOG_TRACE(ComponentImplementationInfo, "ARG " << args.back())
-                                mathStatement.erase(0, mathStatement.find(',') + 1);
-                            }
-                            args.push_back(mathStatement);
-                            LOG_TRACE(ComponentImplementationInfo, "ARG " << args.back())
-    
-                            if (args.size() != 3) {
-                                std::ostringstream eout;
-                                eout << " invalid __MATH__ statement; '" << mathStatement << "'";
-                                throw ossie::PropertyMatchingError(eout.str());
-                            }
-    
-                            LOG_TRACE(ComponentImplementationInfo, "__MATH__ " << args[0] << " " << args[1] << " " << args[2])
-    
-                            double operand;
-                            operand = strtod(args[0].c_str(), NULL);
-    
-                            // See if there is a property in the component
-                            LOG_TRACE(ComponentImplementationInfo, "Attempting to find matching property for " << args[1])
-                            const CF::DataType* matchingCompProp = 0;
-                            for (unsigned int j = 0; j < configureProperties.length(); j++) {
-                                if (strcmp(configureProperties[j].id, args[1].c_str()) == 0) {
-                                    LOG_TRACE(ComponentImplementationInfo, "Matched property for " << args[1])
-                                    matchingCompProp = &configureProperties[j];
-                                }
-                            }
-    
-                            if (matchingCompProp == 0) {
-                                std::ostringstream eout;
-                                eout << " failed to match component property in __MATH__ statement; property id = " << args[1] << " does not exist in component as a configure property";
-                                throw ossie::PropertyMatchingError(eout.str());
-                            }
-    
-                            //std::string stringvalue = ossie::any_to_string(matchingCompProp->value);
-                            //LOG_DEBUG(ImplementationInfo, "Converting " << stringvalue << " " << matchingCompProp->getTypeKind())
-                            //compProp = ossie::string_to_any(stringvalue, matchingCompProp->getTypeKind());
-                            std::string math = args[2];
-                            CORBA::Any compValue = matchingCompProp->value;
-                            LOG_TRACE(ComponentImplementationInfo, "Component configuration value " << ossie::any_to_string(compValue))
-                            depProp.value = ossie::calculateDynamicProp(operand, compValue, math, getTypeKind(simpleMatchingProp->getType()));
-                        } else {
-                            std::ostringstream eout;
-                            eout << " invalid __MATH__ statement; '" << mathStatement << "'";
-                            throw ossie::PropertyMatchingError(eout.str());
-                        }
-                    }
+                        depProp.value = capacityDep;
+		    }
                     LOG_TRACE(ComponentImplementationInfo, "Adding dependency " << depProp.id << " to be " << ossie::any_to_string(depProp.value))
                     addProperty(depProp, allocProps);
                 }
@@ -643,64 +589,11 @@ CF::Properties ImplementationInfo::getAllocationProperties(const Properties& _pr
 
 
                 CORBA::Any capacityDep = ossie::string_to_any(propvalue, getTypeKind(simpleMatchingProp->getType()));
-                if (strncmp(propvalue, "__MATH__", 8) != 0) {
-                    depProp.value = capacityDep;
-                } else {
-                    LOG_TRACE(ImplementationInfo, "Invoking custom OSSIE dynamic allocation property support")
-                    // Turn propvalue into a string for easy parsing
-                    std::string mathStatement = std::string(propvalue).substr(8);
-                    if ((*mathStatement.begin() == '(') && (*mathStatement.rbegin() == ')')) {
-                        // TODO - implement a more relaxed parser
-                        mathStatement.erase(mathStatement.begin(), mathStatement.begin() + 1);
-                        mathStatement.erase(mathStatement.end() - 1, mathStatement.end());
-                        std::vector<std::string> args;
-                        while ((mathStatement.length() > 0) && (mathStatement.find(',') != std::string::npos)) {
-                            args.push_back(mathStatement.substr(0, mathStatement.find(',')));
-                            LOG_TRACE(ImplementationInfo, "ARG " << args.back())
-                            mathStatement.erase(0, mathStatement.find(',') + 1);
-                        }
-                        args.push_back(mathStatement);
-                        LOG_TRACE(ImplementationInfo, "ARG " << args.back())
-
-                        if (args.size() != 3) {
-                            std::ostringstream eout;
-                            eout << " invalid __MATH__ statement; '" << mathStatement << "'";
-                            throw ossie::PropertyMatchingError(eout.str());
-                        }
-
-                        LOG_TRACE(ImplementationInfo, "__MATH__ " << args[0] << " " << args[1] << " " << args[2])
-
-                        double operand;
-                        operand = strtod(args[0].c_str(), NULL);
-
-                        // See if there is a property in the component
-                        LOG_TRACE(ImplementationInfo, "Attempting to find matching property for " << args[1])
-                        const CF::DataType* matchingCompProp = 0;
-                        for (unsigned int j = 0; j < configureProperties.length(); j++) {
-                            if (strcmp(configureProperties[j].id, args[1].c_str()) == 0) {
-                                LOG_TRACE(ImplementationInfo, "Matched property for " << args[1])
-                                matchingCompProp = &configureProperties[j];
-                            }
-                        }
-
-                        if (matchingCompProp == 0) {
-                            std::ostringstream eout;
-                            eout << " failed to match component property in __MATH__ statement; property id = " << args[1] << " does not exist in component as a configure property";
-                            throw ossie::PropertyMatchingError(eout.str());
-                        }
-
-                        //std::string stringvalue = ossie::any_to_string(matchingCompProp->value);
-                        //LOG_DEBUG(ImplementationInfo, "Converting " << stringvalue << " " << matchingCompProp->getTypeKind())
-                        //compProp = ossie::string_to_any(stringvalue, matchingCompProp->getTypeKind());
-                        std::string math = args[2];
-                        CORBA::Any compValue = matchingCompProp->value;
-                        LOG_TRACE(ImplementationInfo, "Component configuration value " << ossie::any_to_string(compValue))
-                        depProp.value = ossie::calculateDynamicProp(operand, compValue, math, getTypeKind(simpleMatchingProp->getType()));
-                    } else {
-                        std::ostringstream eout;
-                        eout << " invalid __MATH__ statement; '" << mathStatement << "'";
-                        throw ossie::PropertyMatchingError(eout.str());
-                    }
+                CORBA::TCKind kind = getTypeKind(simpleMatchingProp->getType());
+		if (strncmp(propvalue, "__MATH__", 8) == 0) {
+		    depProp.value = ossie::evaluateMathStatement(std::string(propvalue), kind, configureProperties);
+		} else {
+		    depProp.value = capacityDep;
                 }
                 LOG_TRACE(ImplementationInfo, "Adding dependency " << depProp.id << " to be " << ossie::any_to_string(depProp.value))
                 addProperty(depProp, allocProps);
