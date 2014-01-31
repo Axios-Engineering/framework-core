@@ -77,6 +77,8 @@ namespace ossie
     CORBA::Any calculateDynamicProp(double operand, CORBA::Any& prop, std::string& math, CORBA::TCKind resultKind);
     CORBA::Any string_to_any(std::string value, CORBA::TCKind kind);
     std::string any_to_string(const CORBA::Any& value);
+    CORBA::Any double_to_any(double value, CORBA::TCKind kind);
+    double any_to_double(const CORBA::Any& value);
     CORBA::Any::from_boolean strings_to_boolean(const std::vector<std::string> &values);
     CORBA::Any::from_char strings_to_char(const std::vector<std::string> &values);
     CORBA::Double strings_to_double(const std::vector<std::string> &values);
@@ -124,6 +126,7 @@ namespace ossie
     CF::Properties getNonNilConfigureProperties(CF::Properties& originalProperties);
 
     CORBA::Any evaluateMathStatement(const std::string& value, CORBA::TCKind kind, const CF::Properties& configureProperties);
+    CORBA::Any evaluatePolyvalStatement(const std::string& value, CORBA::TCKind kind, const CF::Properties& configureProperties);
 }
 
 #endif

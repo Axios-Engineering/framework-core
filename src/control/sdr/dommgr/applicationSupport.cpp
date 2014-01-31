@@ -168,6 +168,8 @@ bool ComponentImplementationInfo::checkUsesDevices(ossie::Properties& _prf, CF::
                     CORBA::TCKind kind = getTypeKind(simpleMatchingProp->getType());
                     if (strncmp(propvalue, "__MATH__", 8) == 0) {
                         depProp.value = ossie::evaluateMathStatement(std::string(propvalue), kind, configureProperties);
+	            } else if (strncmp(propvalue, "__POLYVAL__", 11) == 0) {
+                        depProp.value = ossie::evaluatePolyvalStatement(std::string(propvalue), kind, configureProperties);
                     } else {
                         depProp.value = capacityDep;
 		    }
@@ -592,6 +594,8 @@ CF::Properties ImplementationInfo::getAllocationProperties(const Properties& _pr
                 CORBA::TCKind kind = getTypeKind(simpleMatchingProp->getType());
 		if (strncmp(propvalue, "__MATH__", 8) == 0) {
 		    depProp.value = ossie::evaluateMathStatement(std::string(propvalue), kind, configureProperties);
+		} else if (strncmp(propvalue, "__POLYVAL__", 11) == 0) {
+		    depProp.value = ossie::evaluatePolyvalStatement(std::string(propvalue), kind, configureProperties);
 		} else {
 		    depProp.value = capacityDep;
                 }

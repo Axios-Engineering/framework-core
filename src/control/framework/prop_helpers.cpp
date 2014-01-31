@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <sstream>
 #include <map>
+#include <cmath>
 #if HAVE_OMNIORB4
 #include "omniORB4/CORBA.h"
 #endif
@@ -480,6 +481,123 @@ std::string ossie::any_to_string(const CORBA::Any& value)
         result << "Kind: " << typeValue->kind();
     }
     return result.str();
+}
+
+double ossie::any_to_double(const CORBA::Any& prop)
+{
+    double result = 0.0;
+    CORBA::TypeCode_var typeProp = prop.type();
+
+    switch (typeProp->kind()) {
+    case CORBA::tk_ushort: {
+        CORBA::UShort tmp1;
+        prop >>= tmp1;
+	result = static_cast<double>(tmp1);
+        break;
+    }
+
+    case CORBA::tk_short: {
+        CORBA::Short tmp1;
+        prop >>= tmp1;
+	result = static_cast<double>(tmp1);
+        break;
+    }
+
+    case CORBA::tk_float: {
+        CORBA::Float tmp1;
+        prop >>= tmp1;
+	result = static_cast<double>(tmp1);
+        break;
+    }
+
+    case CORBA::tk_double: {
+        CORBA::Double tmp1;
+        prop >>= tmp1;
+	result = static_cast<double>(tmp1);
+        break;
+    }
+
+    case CORBA::tk_ulong: {
+        CORBA::ULong tmp1;
+        prop >>= tmp1;
+	result = static_cast<double>(tmp1);
+        break;
+    }
+
+    case CORBA::tk_long: {
+        CORBA::Long tmp1;
+        prop >>= tmp1;
+	result = static_cast<double>(tmp1);
+        break;
+    }
+
+    case CORBA::tk_longlong: {
+        CORBA::LongLong tmp1;
+        prop >>= tmp1;
+	result = static_cast<double>(tmp1);
+        break;
+    }
+
+    case CORBA::tk_string: {
+        // Do nothing
+        break;
+    }
+
+    default:
+        break;
+    }
+
+    return result;
+}
+    
+CORBA::Any ossie::double_to_any(double value, CORBA::TCKind kind) 
+{
+    CORBA::Any result;
+    switch (kind) {
+    case CORBA::tk_ushort: {
+        result <<= static_cast<CORBA::UShort>(value);
+        break;
+    }
+
+    case CORBA::tk_short: {
+        result <<= static_cast<CORBA::Short>(value);
+        break;
+    }
+
+    case CORBA::tk_float: {
+        result <<= static_cast<CORBA::Float>(value);
+        break;
+    }
+
+    case CORBA::tk_double: {
+        result <<= static_cast<CORBA::Double>(value);
+        break;
+    }
+
+    case CORBA::tk_ulong: {
+        result <<= static_cast<CORBA::ULong>(value);
+        break;
+    }
+
+    case CORBA::tk_long: {
+        result <<= static_cast<CORBA::Long>(value);
+        break;
+    }
+
+    case CORBA::tk_longlong: {
+        result <<= static_cast<CORBA::LongLong>(value);
+        break;
+    }
+
+    case CORBA::tk_string: {
+        break;
+    }
+
+    default:
+        break;
+    }
+    return result;
+
 }
 
 
@@ -1009,6 +1127,79 @@ CORBA::Any ossie::evaluateMathStatement(const std::string& value, CORBA::TCKind 
     return result;
 }
 
+CORBA::Any ossie::evaluatePolyvalStatement(const std::string& value, CORBA::TCKind kind, const CF::Properties& configureProperties) {
+    CORBA::Any result;
+    LOG_TRACE(prop_helpers, "Invoking custom OSSIE dynamic allocation property support")
+    // Turn propvalue into a string for easy parsing
+    std::string polyvalStatement = value.substr(11);
+    if ((*polyvalStatement.begin() == '(') && (*polyvalStatement.rbegin() == ')')) {
+	// TODO - implement a more relaxed parser
+	polyvalStatement.erase(polyvalStatement.begin(), polyvalStatement.begin() + 1);
+	polyvalStatement.erase(polyvalStatement.end() - 1, polyvalStatement.end());
+	std::vector<std::string> args;
+	while ((polyvalStatement.length() > 0) && (polyvalStatement.find(',') != std::string::npos)) {
+	    args.push_back(polyvalStatement.substr(0, polyvalStatement.find(',')));
+	    LOG_TRACE(prop_helpers, "POLYVAL ARG " << args.back())
+	    polyvalStatement.erase(0, polyvalStatement.find(',') + 1);
+	}
+	args.push_back(polyvalStatement);
+	LOG_TRACE(prop_helpers, "POLYVAL ARG " << args.back())
+
+	if (args.size() < 2) {
+	    std::ostringstream eout;
+	    eout << " invalid __POLYVAL__ statement; '" << polyvalStatement << "'";
+	    throw ossie::PropertyMatchingError(eout.str());
+	}
+
+	// See if there is a property in the component
+	std::string propval = args[args.size()-1];
+	LOG_TRACE(prop_helpers, "Attempting to find matching property for " << propval)
+	const CF::DataType* matchingCompProp = 0;
+	for (unsigned int j = 0; j < configureProperties.length(); j++) {
+	    if (strcmp(configureProperties[j].id, propval.c_str()) == 0) {
+		LOG_TRACE(prop_helpers, "Matched property for " << propval)
+		matchingCompProp = &configureProperties[j];
+	    }
+	    // See if the property we're looking for is a member of a struct
+	    //  **note: this only works because the dtd states that each
+	    //          property id is globally unique within the prf
+	    const CF::Properties* tmp_ref = NULL;
+	    configureProperties[j].value >>= tmp_ref;
+	    if (tmp_ref != NULL) {
+		for (unsigned prop_idx = 0; prop_idx<tmp_ref->length(); prop_idx++) {
+		    if (strcmp((*tmp_ref)[prop_idx].id, propval.c_str()) == 0) {
+			LOG_TRACE(prop_helpers, "Matched property for " << propval)
+			matchingCompProp = &(*tmp_ref)[prop_idx];
+		    }
+		}
+	    }
+	}
+
+	if (matchingCompProp == 0) {
+	    std::ostringstream eout;
+	    eout << " failed to match component property in __POLYVAL__ statement; property id = " << args[1] << " does not exist in component as a configure property";
+	    throw ossie::PropertyMatchingError(eout.str());
+	}
+
+	CORBA::Any compValue = matchingCompProp->value;
+	double x = ossie::any_to_double(compValue);
+	double v = 0.0;
+	for (size_t i = 0; i < args.size() - 1; i++) {
+	    double exp = (args.size()-2-i);
+	    double val = pow(x, exp);
+	    double mult = strtod(args[i].c_str(), NULL);
+	    v += mult * val;
+	    LOG_TRACE(prop_helpers, "POLY " << mult  << "*" << x << "^" << exp << "=" << mult << "*" << val << " now " << v);
+	}
+	result = ossie::double_to_any(v, kind);
+    } else {
+	std::ostringstream eout;
+	eout << " invalid __POLYVAL__ statement; '" << polyvalStatement << "'";
+	throw ossie::PropertyMatchingError(eout.str());
+    }
+    return result;
+}
+
 static CF::Properties overrideStructValues(const StructProperty* prop, const std::map<std::string, std::string>& values, const CF::Properties& configureProperties)
 {
     const std::vector<SimpleProperty>& simpleProps = prop->getValue();
@@ -1029,6 +1220,9 @@ static CF::Properties overrideStructValues(const StructProperty* prop, const std
             if (strncmp(value.c_str(), "__MATH__", 8) == 0) {
 		structval[ii].id = CORBA::string_dup(simple.getID());
                 structval[ii].value = ossie::evaluateMathStatement(value, kind, configureProperties);
+	    } else if (strncmp(value.c_str(), "__POLYVAL__", 11) == 0) {
+		structval[ii].id = CORBA::string_dup(simple.getID());
+                structval[ii].value = ossie::evaluatePolyvalStatement(value, kind, configureProperties);
             } else {
                 structval[ii] = overrideSimpleValue(&simple, itemoverride->second);
             }
