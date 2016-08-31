@@ -1009,27 +1009,43 @@ void Application_impl::_cleanupActivations()
     if (!_registrar) {
         return;
     }
-    PortableServer::POA_var dm_poa = ossie::corba::RootPOA()->find_POA("DomainManager", 0);
-    PortableServer::POA_var app_poa = dm_poa->find_POA("Applications", 0);
+
+    PortableServer::POA_var app_poa;
+    try {
+        PortableServer::POA_var dm_poa = ossie::corba::RootPOA()->find_POA("DomainManager", 0);
+        app_poa = dm_poa->find_POA("Applications", 0);
+    } catch (const PortableServer::POA::AdapterNonExistent&) {
+        LOG_WARN(Application_impl, "Aborting cleanup because the POA objects cannot be found");
+        return;
+    }
+
 
     // Deactivate the application registry, release our reference and reset the
     // local pointer
-    PortableServer::ObjectId_var oid = app_poa->servant_to_id(_registrar);
-    app_poa->deactivate_object(oid);
-    _registrar->_remove_ref();
-    _registrar = 0;
+    PortableServer::ObjectId_var oid;
+    try {
+        oid = app_poa->servant_to_id(_registrar);
+        app_poa->deactivate_object(oid);
+        _registrar->_remove_ref();
+        _registrar = 0;
+    } CATCH_LOG_WARN(Application_impl, "Error cleaning up application registry object");
 
     // If we created a fake application proxy, deactivate and clean it up too
     if (_fakeProxy) {
-        oid = app_poa->servant_to_id(_fakeProxy);
-        app_poa->deactivate_object(oid);
-        _fakeProxy->_remove_ref();
+        try {
+            oid = app_poa->servant_to_id(_fakeProxy);
+            app_poa->deactivate_object(oid);
+            _fakeProxy->_remove_ref();
+        } CATCH_LOG_WARN(Application_impl, "Error cleaning up application proxy object");
         _fakeProxy = 0;
     }
 
     // Release this application
-    oid = app_poa->servant_to_id(this);
-    app_poa->deactivate_object(oid);
+    try {
+        oid = app_poa->servant_to_id(this);
+        app_poa->deactivate_object(oid);
+    } CATCH_LOG_WARN(Application_impl, "Error cleaning up application object");
+
 }
 
 char* Application_impl::name ()

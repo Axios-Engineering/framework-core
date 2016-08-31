@@ -2857,16 +2857,18 @@ createHelper::createHelper (
 
 createHelper::~createHelper()
 {
-    if (!_isComplete) {
-        _cleanupFailedCreate();
-    }
-    if (_application) {
-        _application->_remove_ref();
-    }
-    for (PlacementList::iterator comp = _requiredComponents.begin(); comp != _requiredComponents.end(); ++comp) {
-        delete (*comp);
-    }
-    _requiredComponents.clear();
+    try {
+        if (!_isComplete) {
+            _cleanupFailedCreate();
+        }
+        if (_application) {
+            _application->_remove_ref();
+        }
+        for (PlacementList::iterator comp = _requiredComponents.begin(); comp != _requiredComponents.end(); ++comp) {
+            delete (*comp);
+        }
+        _requiredComponents.clear();
+    } CATCH_LOG_WARN(ApplicationFactory_impl, "Unexpected error cleaning up createHelper");
 }
 
 void createHelper::_cleanupFailedCreate()
